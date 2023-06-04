@@ -105,12 +105,28 @@ class Food:
             pygame.draw.circle(screen, speed_reducing_food_color, self.coordinates, food_size)
 
 
+class Obstruction:
+    color = (127, 127, 127,)
+
+    def __init__(self, x0, y0, x1, y1):
+        self.obstruction_coordinates = (x0, y0, x1, y1)
+
+    def draw(self):
+        pygame.draw.rect(screen, self.color, self.obstruction_coordinates)
+
+
 def count_distance(coordinates1, coordinates2):
     return int(((coordinates1[0] - coordinates2[0]) ** 2 + (coordinates1[1] - coordinates2[1]) ** 2) ** 0.5)
 
 
 def count_distance_from_turn(turn_coordinates, coordinates):
     return int(((2 * snake_size) ** 2 - count_distance(turn_coordinates, coordinates) ** 2) ** 0.5)
+
+
+def is_collision_obstruction(obstruction_coordinates, snake_coordinates):
+    if obstruction_coordinates[0] < snake_coordinates[0] + snake_size < obstruction_coordinates[3]:
+        if obstruction_coordinates[4] > snake_coordinates[1] + snake_size > obstruction_coordinates[2]:
+            return True
 
 
 pygame.init()
