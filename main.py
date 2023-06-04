@@ -106,8 +106,8 @@ def count_distance_from_turn(turn_coordinates, coordinates):
 
 
 def is_collision_obstruction(obstruction_coordinates, snake_coordinates):
-    if obstruction_coordinates[0] < snake_coordinates[0] < obstruction_coordinates[3]:
-        if obstruction_coordinates[4] > snake_coordinates[1] > obstruction_coordinates[2]:
+    if obstruction_coordinates[0] < snake_coordinates[0] + snake_size < obstruction_coordinates[3]:
+        if obstruction_coordinates[4] > snake_coordinates[1] + snake_size > obstruction_coordinates[2]:
             return True
 
 
