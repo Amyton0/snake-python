@@ -108,6 +108,9 @@ fps = 70
 snake_color = (53, 194, 102)
 snake_size = 7
 
+lives = 3
+last_length = 0
+
 play_button_size = 70
 play_button_coordinates = (width // 2, height // 2 + 50)
 
@@ -143,6 +146,7 @@ while running:
                 snake.direction = 3
         if event.type == pygame.MOUSEBUTTONDOWN:
             if (count_distance(event.pos, play_button_coordinates)) <= play_button_size and not is_alive:
+                lives = 3
                 is_alive = True
                 food = Food()
                 snake = Snake()
@@ -156,8 +160,10 @@ while running:
         food.draw()
         snake.draw()
 
-        score = font.render(str(snake.length - 5), True, (0, 0, 0))
+        score = font.render("Score " + str(snake.length - 5), True, (0, 0, 0))
+        lives_on_screen = font.render("Lives " + str(lives), True, (0, 0, 0))
         screen.blit(score, (10, 10))
+        screen.blit(lives_on_screen, (10, 40))
 
         pygame.draw.circle(screen, pause_button_color, pause_button_coordinates, pause_button_size, 2)
 
@@ -173,7 +179,13 @@ while running:
                 food.draw()
 
             if snake.is_collision():
-                is_alive = False
+                lives = lives - 1
+                last_length = snake.length
+                snake = Snake()
+                snake.length = last_length
+                print(lives)
+                if lives <= 0:
+                    is_alive = False
 
             clock.tick(fps)
         else:
