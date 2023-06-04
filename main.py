@@ -9,6 +9,7 @@ class Snake:
         self.turns = []
         self.head = (width // 2, height // 2)
         self.segments = []
+        self.fps = 70
 
     def move(self):
         current_turn = len(self.turns) - 1
@@ -64,8 +65,17 @@ class Snake:
         for segment in self.segments:
             pygame.draw.circle(screen, snake_color, segment, snake_size)
 
-    def eat(self):
+    def eat_length_increasing_food(self):
         self.length += 1
+
+    def eat_length_reducing_food(self):
+        self.length -= 1
+
+    def eat_speed_increasing_food(self):
+        self.fps += 10
+
+    def eat_speed_reducing_food(self):
+        self.fps -= 10
 
     def is_collision(self):
         if self.head[0] < snake_size or self.head[0] > width - snake_size or \
@@ -80,11 +90,19 @@ class Snake:
 
 
 class Food:
-    def __init__(self):
+    def __init__(self, effect):
         self.coordinates = (random.randint(food_size, width - food_size), random.randint(food_size, height - food_size))
+        self.effect = effect
 
     def draw(self):
-        pygame.draw.circle(screen, food_color, self.coordinates, food_size)
+        if self.effect == "increase length":
+            pygame.draw.circle(screen, length_increasing_food_color, self.coordinates, food_size)
+        if self.effect == "reduce length":
+            pygame.draw.circle(screen, length_reducing_food_color, self.coordinates, food_size)
+        if self.effect == "increase speed":
+            pygame.draw.circle(screen, speed_increasing_food_color, self.coordinates, food_size)
+        if self.effect == "reduce speed":
+            pygame.draw.circle(screen, speed_reducing_food_color, self.coordinates, food_size)
 
 
 def count_distance(coordinates1, coordinates2):
@@ -101,9 +119,13 @@ screen = pygame.display.set_mode(size)
 running = True
 is_alive = True
 is_paused = False
-food_color = (135, 234, 0)
+
+length_increasing_food_color = (135, 234, 0)
+length_reducing_food_color = (240, 128, 128)
+speed_increasing_food_color = (255, 165, 0)
+speed_reducing_food_color = (240, 230, 140)
+
 food_size = 6
-fps = 70
 
 snake_color = (53, 194, 102)
 snake_size = 7
@@ -115,7 +137,11 @@ pause_button_size = 10
 pause_button_color = (200, 200, 200)
 pause_button_coordinates = (width - 15, 15)
 
-food = Food()
+length_increasing_food = Food("increase length")
+length_reducing_food = Food("reduce length")
+speed_increasing_food = Food("increase speed")
+speed_reducing_food = Food("reduce speed")
+
 snake = Snake()
 clock = pygame.time.Clock()
 font = pygame.font.Font(None, 50)
@@ -144,7 +170,12 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if (count_distance(event.pos, play_button_coordinates)) <= play_button_size and not is_alive:
                 is_alive = True
-                food = Food()
+
+                length_increasing_food = Food("increase length")
+                length_reducing_food = Food("reduce length")
+                speed_increasing_food = Food("increase speed")
+                speed_reducing_food = Food("reduce speed")
+
                 snake = Snake()
             if (count_distance(event.pos, pause_button_coordinates)) <= pause_button_size and is_alive:
                 if is_paused:
@@ -153,7 +184,10 @@ while running:
                     is_paused = True
     if is_alive:
         screen.fill((255, 255, 255))
-        food.draw()
+        length_increasing_food.draw()
+        length_reducing_food.draw()
+        speed_increasing_food.draw()
+        speed_reducing_food.draw()
         snake.draw()
 
         score = font.render(str(snake.length - 5), True, (0, 0, 0))
@@ -167,15 +201,30 @@ while running:
             pygame.draw.rect(screen, pause_button_color, (width - 19, 10, 3, 10))
             pygame.draw.rect(screen, pause_button_color, (width - 14, 10, 3, 10))
 
-            if count_distance(food.coordinates, snake.head) <= snake_size + food_size:
-                snake.eat()
-                food = Food()
-                food.draw()
+            if count_distance(length_increasing_food.coordinates, snake.head) <= snake_size + food_size:
+                snake.eat_length_increasing_food()
+                length_increasing_food = Food("increase length")
+                length_increasing_food.draw()
 
-            if snake.is_collision():
+            if count_distance(length_reducing_food.coordinates, snake.head) <= snake_size + food_size:
+                snake.eat_length_reducing_food()
+                length_reducing_food = Food("reduce length")
+                length_reducing_food.draw()
+
+            if count_distance(speed_increasing_food.coordinates, snake.head) <= snake_size + food_size:
+                snake.eat_speed_increasing_food()
+                speed_increasing_food = Food("increase speed")
+                speed_increasing_food.draw()
+
+            if count_distance(speed_reducing_food.coordinates, snake.head) <= snake_size + food_size:
+                snake.eat_speed_reducing_food()
+                speed_reducing_food = Food("reduce speed")
+                speed_reducing_food.draw()
+
+            if snake.is_collision() or snake.length == 0:
                 is_alive = False
 
-            clock.tick(fps)
+            clock.tick(snake.fps)
         else:
             pygame.draw.polygon(screen, pause_button_color, ((width - 18, 10), (width - 11, 14), (width - 18, 19)))
     else:
