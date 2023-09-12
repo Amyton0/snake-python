@@ -1,5 +1,5 @@
-from main import count_distance
-from main import Snake
+from main.main import count_distance
+from main.main import Snake
 
 
 def test_distance_between_dots():
