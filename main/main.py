@@ -1,6 +1,7 @@
 import pygame
 import random
 import time
+import pickle
 
 
 class Snake:
@@ -96,8 +97,8 @@ class Snake:
                 print(segment)
                 return True
 
-        for obstruction in obstructions:
-            if is_collision_obstruction(obstruction.coordinates, self.head):
+        for obstr in game.obstructions:
+            if is_collision_obstruction(obstr.coordinates, self.head):
                 return True
 
         return False
@@ -105,7 +106,8 @@ class Snake:
 
 class Food:
     def __init__(self):
-        self.coordinates = (random.randint(food_size, width - food_size), random.randint(food_size, height - food_size))
+        self.coordinates = (random.randint(food_size, width - food_size),
+                            random.randint(food_size, height - food_size))
 
         while self.coordinates[0] < 130 and self.coordinates[1] < 70 or self.coordinates[0] > \
                 pause_button_coordinates[0] - pause_button_size and self.coordinates[1] > \
@@ -153,18 +155,17 @@ class Obstruction:
         coordinates = (random.randint(obstruction_size, width - obstruction_size),
                        random.randint(obstruction_size, height - obstruction_size))
 
-        while is_collision_obstruction(coordinates, snake.head) or \
-                is_collision_obstruction(coordinates, length_reducing_food.coordinates) or \
-                is_collision_obstruction(coordinates, length_increasing_food.coordinates) or \
-                is_collision_obstruction(coordinates, speed_reducing_food.coordinates) or \
-                is_collision_obstruction(coordinates, speed_increasing_food.coordinates) or \
-                is_collision_obstruction(coordinates, bonus_food.coordinates) or \
+        while is_collision_obstruction(coordinates, game.snake.head) or \
+                is_collision_obstruction(coordinates, game.length_reducing_food.coordinates) or \
+                is_collision_obstruction(coordinates, game.length_increasing_food.coordinates) or \
+                is_collision_obstruction(coordinates, game.speed_reducing_food.coordinates) or \
+                is_collision_obstruction(coordinates, game.speed_increasing_food.coordinates) or \
+                is_collision_obstruction(coordinates, game.bonus_food.coordinates) or \
                 coordinates[0] < 130 and coordinates[1] < 70:
             coordinates = (random.randint(obstruction_size, width - obstruction_size),
                            random.randint(obstruction_size, height - obstruction_size))
 
-        self.coordinates = (coordinates[0], coordinates[1], obstruction_size,
-                            obstruction_size)
+        self.coordinates = (coordinates[0], coordinates[1], obstruction_size, obstruction_size)
 
     def draw(self):
         pygame.draw.rect(screen, self.color, self.coordinates)
@@ -180,7 +181,7 @@ def count_distance_from_turn(turn_coordinates, coordinates):
 
 def create_obstructions(number):
     for i in range(number):
-        obstructions.append(Obstruction())
+        game.obstructions.append(Obstruction())
 
 
 def is_collision_obstruction(obstruction_coordinates, object_coordinates):
@@ -191,7 +192,8 @@ def is_collision_obstruction(obstruction_coordinates, object_coordinates):
         if obstruction_coordinates[1] < object_coordinates[1] + snake_size < \
                 obstruction_coordinates[1] + obstruction_size:
             return True
-    if obstruction_coordinates[0] < object_coordinates[0] + snake_size < obstruction_coordinates[0] + obstruction_size:
+    if obstruction_coordinates[0] < object_coordinates[0] + snake_size < obstruction_coordinates[0] + \
+            obstruction_size:
         if obstruction_coordinates[1] < object_coordinates[1] - snake_size < \
                 obstruction_coordinates[1] + obstruction_size:
             return True
@@ -202,12 +204,43 @@ def is_collision_obstruction(obstruction_coordinates, object_coordinates):
     return False
 
 
+class Game:
+    def __init__(self):
+        self.running = True
+        self.is_alive = True
+        self.is_paused = False
+
+        self.number_of_obstructions = 0
+        self.obstructions = []
+
+        self.lives = 3
+        self.last_length = 0
+
+        self.length_increasing_food = LengthIncreasingFood()
+        self.length_reducing_food = LengthReducingFood()
+        self.speed_increasing_food = SpeedIncreasingFood()
+        self.speed_reducing_food = SpeedReducingFood()
+        self.bonus_food = BonusFood()
+
+        self.is_bonus = False
+
+        self.snake = Snake()
+
+    def save(self, filename):
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(filename):
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+
+
 pygame.init()
+
 size = width, height = 800, 600
+
 screen = pygame.display.set_mode(size)
-running = True
-is_alive = True
-is_paused = False
 
 length_increasing_food_color = (135, 234, 0)
 length_reducing_food_color = (240, 128, 128)
@@ -215,177 +248,167 @@ speed_increasing_food_color = (102, 205, 170)
 speed_reducing_food_color = (240, 230, 140)
 bonus_food_color = (255, 215, 0)
 
-number_of_obstructions = 0
-obstructions = []
-
-food_size = 6
-bonus_food_size = 8
-
-obstruction_size = 40
-
-snake_size = 7
-
-lives = 3
-last_length = 0
-
 play_button_size = 70
-play_button_coordinates = (width // 2, height // 2 + 50)
 
 pause_button_size = 10
 pause_button_color = (200, 200, 200)
+
+play_button_coordinates = (width // 2, height // 2 + 50)
 pause_button_coordinates = (width - 15, 15)
 
-length_increasing_food = LengthIncreasingFood()
-length_reducing_food = LengthReducingFood()
-speed_increasing_food = SpeedIncreasingFood()
-speed_reducing_food = SpeedReducingFood()
-bonus_food = BonusFood()
+food_size = 6
+bonus_food_size = 8
+obstruction_size = 40
+snake_size = 7
 
-is_bonus = False
-
-snake = Snake()
-clock = pygame.time.Clock()
 font = pygame.font.Font(None, 50)
 font2 = pygame.font.Font(None, 40)
 
-while running:
+clock = pygame.time.Clock()
+
+game = Game.load("saving.pickle")
+
+while game.running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN and is_alive and not is_paused:
-            if (event.key == pygame.K_UP or event.key == pygame.K_w) and snake.direction != 0 and snake.direction != 2:
-                if len(snake.turns) > 0:
-                    if count_distance(snake.head, snake.turns[-1][0]) > 2 * snake_size:
-                        snake.turns.append((snake.head, snake.direction))
-                        snake.direction = 0
+            game.save("saving.pickle")
+            game.running = False
+        if event.type == pygame.KEYDOWN and game.is_alive and not game.is_paused:
+            if (event.key == pygame.K_UP or event.key == pygame.K_w) and game.snake.direction != 0 and \
+                    game.snake.direction != 2:
+                if len(game.snake.turns) > 0:
+                    if count_distance(game.snake.head, game.snake.turns[-1][0]) > 2 * snake_size:
+                        game.snake.turns.append((game.snake.head, game.snake.direction))
+                        game.snake.direction = 0
                 else:
-                    snake.turns.append((snake.head, snake.direction))
-                    snake.direction = 0
-            if (event.key == pygame.K_RIGHT or event.key == pygame.K_d) and snake.direction != 1 and \
-                    snake.direction != 3:
-                if len(snake.turns) > 0:
-                    if count_distance(snake.head, snake.turns[-1][0]) > 2 * snake_size:
-                        snake.turns.append((snake.head, snake.direction))
-                        snake.direction = 1
+                    game.snake.turns.append((game.snake.head, game.snake.direction))
+                    game.snake.direction = 0
+            if (event.key == pygame.K_RIGHT or event.key == pygame.K_d) and game.snake.direction != 1 and \
+                    game.snake.direction != 3:
+                if len(game.snake.turns) > 0:
+                    if count_distance(game.snake.head, game.snake.turns[-1][0]) > 2 * snake_size:
+                        game.snake.turns.append((game.snake.head, game.snake.direction))
+                        game.snake.direction = 1
                 else:
-                    snake.turns.append((snake.head, snake.direction))
-                    snake.direction = 1
-            if (event.key == pygame.K_DOWN or event.key == pygame.K_s) and snake.direction != 0 and \
-                    snake.direction != 2:
-                if len(snake.turns) > 0:
-                    if count_distance(snake.head, snake.turns[-1][0]) > 2 * snake_size:
-                        snake.turns.append((snake.head, snake.direction))
-                        snake.direction = 2
+                    game.snake.turns.append((game.snake.head, game.snake.direction))
+                    game.snake.direction = 1
+            if (event.key == pygame.K_DOWN or event.key == pygame.K_s) and game.snake.direction != 0 and \
+                    game.snake.direction != 2:
+                if len(game.snake.turns) > 0:
+                    if count_distance(game.snake.head, game.snake.turns[-1][0]) > 2 * snake_size:
+                        game.snake.turns.append((game.snake.head, game.snake.direction))
+                        game.snake.direction = 2
                 else:
-                    snake.turns.append((snake.head, snake.direction))
-                    snake.direction = 2
-            if (event.key == pygame.K_LEFT or event.key == pygame.K_a) and snake.direction != 1 and \
-                    snake.direction != 3:
-                if len(snake.turns) > 0:
-                    if count_distance(snake.head, snake.turns[-1][0]) > 2 * snake_size:
-                        snake.turns.append((snake.head, snake.direction))
-                        snake.direction = 3
+                    game.snake.turns.append((game.snake.head, game.snake.direction))
+                    game.snake.direction = 2
+            if (event.key == pygame.K_LEFT or event.key == pygame.K_a) and game.snake.direction != 1 and \
+                    game.snake.direction != 3:
+                if len(game.snake.turns) > 0:
+                    if count_distance(game.snake.head, game.snake.turns[-1][0]) > 2 * snake_size:
+                        game.snake.turns.append((game.snake.head, game.snake.direction))
+                        game.snake.direction = 3
                 else:
-                    snake.turns.append((snake.head, snake.direction))
-                    snake.direction = 3
+                    game.snake.turns.append((game.snake.head, game.snake.direction))
+                    game.snake.direction = 3
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if (count_distance(event.pos, play_button_coordinates)) <= play_button_size and not is_alive:
-                lives = 3
-                is_alive = True
+            if (count_distance(event.pos, play_button_coordinates)) <= play_button_size and not game.is_alive:
+                game.lives = 3
+                game.is_alive = True
 
-                length_increasing_food = LengthIncreasingFood()
-                length_reducing_food = LengthReducingFood()
-                speed_increasing_food = SpeedIncreasingFood()
-                speed_reducing_food = SpeedReducingFood()
+                game.length_increasing_food = LengthIncreasingFood()
+                game.length_reducing_food = LengthReducingFood()
+                game.speed_increasing_food = SpeedIncreasingFood()
+                game.speed_reducing_food = SpeedReducingFood()
 
-                snake = Snake()
-            if (count_distance(event.pos, pause_button_coordinates)) <= pause_button_size and is_alive:
-                if is_paused:
-                    is_paused = False
+                game.snake = Snake()
+            if (count_distance(event.pos, pause_button_coordinates)) <= pause_button_size and game.is_alive:
+                if game.is_paused:
+                    game.is_paused = False
                 else:
-                    is_paused = True
-    if is_alive:
+                    game.is_paused = True
+    if game.is_alive:
         screen.fill((255, 255, 255))
-        length_increasing_food.draw()
-        length_reducing_food.draw()
-        speed_increasing_food.draw()
-        speed_reducing_food.draw()
-        if is_bonus:
-            bonus_food.draw()
-        snake.draw()
+        game.length_increasing_food.draw()
+        game.length_reducing_food.draw()
+        game.speed_increasing_food.draw()
+        game.speed_reducing_food.draw()
+        if game.is_bonus:
+            game.bonus_food.draw()
+        game.snake.draw()
 
-        for obstruction in obstructions:
+        for obstruction in game.obstructions:
             obstruction.draw()
 
-        score = font.render("Score " + str(snake.score), True, (0, 0, 0))
-        lives_on_screen = font.render("Lives " + str(lives), True, (0, 0, 0))
+        score = font.render("Score " + str(game.snake.score), True, (0, 0, 0))
+        lives_on_screen = font.render("Lives " + str(game.lives), True, (0, 0, 0))
         screen.blit(score, (10, 10))
         screen.blit(lives_on_screen, (10, 40))
 
         pygame.draw.circle(screen, pause_button_color, pause_button_coordinates, pause_button_size, 2)
 
-        if not is_paused:
-            snake.move()
+        if not game.is_paused:
+            game.snake.move()
 
             pygame.draw.rect(screen, pause_button_color, (width - 19, 10, 3, 10))
             pygame.draw.rect(screen, pause_button_color, (width - 14, 10, 3, 10))
 
-            if count_distance(length_increasing_food.coordinates, snake.head) <= snake_size + food_size:
-                snake.eat_length_increasing_food()
-                length_increasing_food = LengthIncreasingFood()
-                length_increasing_food.draw()
+            if count_distance(game.length_increasing_food.coordinates, game.snake.head) <= snake_size + \
+                    food_size:
+                game.snake.eat_length_increasing_food()
+                game.length_increasing_food = LengthIncreasingFood()
+                game.length_increasing_food.draw()
 
-                if snake.length % 2 != 0:
-                    if number_of_obstructions < 20:
-                        number_of_obstructions = (snake.length - 5) // 2
-                    obstructions = []
-                    create_obstructions(number_of_obstructions)
+                if game.snake.length % 2 != 0:
+                    if game.number_of_obstructions < 20:
+                        game.number_of_obstructions = (game.snake.length - 5) // 2
+                    game.obstructions = []
+                    create_obstructions(game.number_of_obstructions)
 
-            if count_distance(length_reducing_food.coordinates, snake.head) <= snake_size + food_size:
-                snake.eat_length_reducing_food()
-                length_reducing_food = LengthReducingFood()
-                length_reducing_food.draw()
+            if count_distance(game.length_reducing_food.coordinates, game.snake.head) <= snake_size + food_size:
+                game.snake.eat_length_reducing_food()
+                game.length_reducing_food = LengthReducingFood()
+                game.length_reducing_food.draw()
 
-                if snake.length % 2 != 0:
-                    if number_of_obstructions < 20:
-                        number_of_obstructions = (snake.length - 5) // 2
-                    obstructions = []
-                    create_obstructions(number_of_obstructions)
+                if game.snake.length % 2 != 0:
+                    if game.number_of_obstructions < 20:
+                        game.number_of_obstructions = (game.snake.length - 5) // 2
+                    game.obstructions = []
+                    create_obstructions(game.number_of_obstructions)
 
-            if count_distance(speed_increasing_food.coordinates, snake.head) <= snake_size + food_size:
-                snake.eat_speed_increasing_food()
-                speed_increasing_food = SpeedIncreasingFood()
-                speed_increasing_food.draw()
+            if count_distance(game.speed_increasing_food.coordinates, game.snake.head) <= snake_size + food_size:
+                game.snake.eat_speed_increasing_food()
+                game.speed_increasing_food = SpeedIncreasingFood()
+                game.speed_increasing_food.draw()
 
-            if count_distance(speed_reducing_food.coordinates, snake.head) <= snake_size + food_size:
-                snake.eat_speed_reducing_food()
-                speed_reducing_food = SpeedReducingFood()
-                speed_reducing_food.draw()
+            if count_distance(game.speed_reducing_food.coordinates, game.snake.head) <= snake_size + food_size:
+                game.snake.eat_speed_reducing_food()
+                game.speed_reducing_food = SpeedReducingFood()
+                game.speed_reducing_food.draw()
 
-            if is_bonus:
-                if (pygame.time.get_ticks() - bonus_food.ticks) / 1000 >= 10:
-                    is_bonus = False
-                    bonus_food = BonusFood()
+            if game.is_bonus:
+                if (pygame.time.get_ticks() - game.bonus_food.ticks) / 1000 >= 10:
+                    game.is_bonus = False
+                    game.bonus_food = BonusFood()
             else:
-                if (pygame.time.get_ticks() - bonus_food.ticks) / 1000 >= 20:
-                    is_bonus = True
-                    bonus_food.set_timer()
+                if (pygame.time.get_ticks() - game.bonus_food.ticks) / 1000 >= 20:
+                    game.is_bonus = True
+                    game.bonus_food.set_timer()
 
-            if is_bonus and count_distance(bonus_food.coordinates, snake.head) <= snake_size + food_size:
-                snake.eat_bonus_food()
-                bonus_food = BonusFood()
-                is_bonus = False
+            if game.is_bonus and count_distance(game.bonus_food.coordinates, game.snake.head) <= snake_size + food_size:
+                game.snake.eat_bonus_food()
+                game.bonus_food = BonusFood()
+                game.is_bonus = False
 
-            if snake.is_collision() or snake.length == 0:
-                lives = lives - 1
-                last_length = snake.length
-                snake = Snake()
+            if game.snake.is_collision() or game.snake.length == 0:
+                game.lives = game.lives - 1
+                last_length = game.snake.length
+                game.snake = Snake()
                 if last_length > 0:
-                    snake.length = last_length
+                    game.snake.length = last_length
                 else:
-                    snake.length = 1
-                if lives <= 0:
-                    is_alive = False
+                    game.snake.length = 1
+                if game.lives <= 0:
+                    game.is_alive = False
                 death_screen = pygame.Surface(size)
                 death_screen.fill((255, 0, 0))
                 death_screen.set_alpha(150)
@@ -393,7 +416,7 @@ while running:
                 pygame.display.flip()
                 time.sleep(0.5)
 
-            clock.tick(snake.fps)
+            clock.tick(game.snake.fps)
         else:
             pygame.draw.polygon(screen, pause_button_color, ((width - 18, 10), (width - 11, 14), (width - 18, 19)))
 
@@ -401,7 +424,7 @@ while running:
         screen.fill((255, 255, 255))
         text = font.render("Игра окончена", True, (0, 0, 0))
         screen.blit(text, (width // 2 - 130, height // 2 - 150))
-        score = font.render(str(snake.score), True, (0, 0, 0))
+        score = font.render(str(game.snake.score), True, (0, 0, 0))
         screen.blit(score, (width // 2 - 10, height // 2 - 90))
 
         playText = font2.render("Играть", True, (0, 0, 0))
@@ -409,7 +432,6 @@ while running:
         pygame.draw.circle(screen, 'red', play_button_coordinates, play_button_size)
         screen.blit(playText, (width // 2 - 43, height // 2 + 40))
 
-    print(snake.turns)
     pygame.display.flip()
 
 pygame.quit()
