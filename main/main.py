@@ -97,10 +97,6 @@ class Snake:
                 print(segment)
                 return True
 
-        for obstr in game.obstructions:
-            if is_collision_obstruction(obstr.coordinates, self.head):
-                return True
-
         return False
 
 
@@ -151,24 +147,51 @@ class BonusFood(Food):
 class Obstruction:
     color = (127, 127, 127)
 
-    def __init__(self):
-        coordinates = (random.randint(obstruction_size, width - obstruction_size),
-                       random.randint(obstruction_size, height - obstruction_size))
-
-        while is_collision_obstruction(coordinates, game.snake.head) or \
-                is_collision_obstruction(coordinates, game.length_reducing_food.coordinates) or \
-                is_collision_obstruction(coordinates, game.length_increasing_food.coordinates) or \
-                is_collision_obstruction(coordinates, game.speed_reducing_food.coordinates) or \
-                is_collision_obstruction(coordinates, game.speed_increasing_food.coordinates) or \
-                is_collision_obstruction(coordinates, game.bonus_food.coordinates) or \
-                coordinates[0] < 130 and coordinates[1] < 70:
-            coordinates = (random.randint(obstruction_size, width - obstruction_size),
-                           random.randint(obstruction_size, height - obstruction_size))
-
-        self.coordinates = (coordinates[0], coordinates[1], obstruction_size, obstruction_size)
+    def __init__(self, x=None, y=None):
+        if x is not None and y is not None:
+            self.coordinates = (x, y, obstruction_size, obstruction_size)
 
     def draw(self):
         pygame.draw.rect(screen, self.color, self.coordinates)
+
+
+class Level:
+    def __init__(self, obstacles):
+        self.obstacles = obstacles
+
+    def draw(self):
+        for obstacle in self.obstacles:
+            obstacle.draw()
+
+
+def create_levels(score):
+    levels = []
+
+    level1_obstacles = [
+        Obstruction(100, 100),
+        Obstruction(600, 400)
+    ]
+    level1 = Level(level1_obstacles)
+    levels.append(level1)
+
+    if score >= 5:
+        level2_obstacles = [
+            Obstruction(500, 40),
+            Obstruction(200, 300)
+        ]
+        level2 = Level(level1_obstacles + level2_obstacles)
+        levels.append(level2)
+
+    if score >= 10:
+        level3_obstacles = [
+            Obstruction(400, 400),
+            Obstruction(600, 200),
+            Obstruction(100, 500)
+        ]
+        level3 = Level(level1_obstacles + level2_obstacles + level3_obstacles)
+        levels.append(level3)
+
+    return levels
 
 
 def count_distance(coordinates1, coordinates2):
@@ -177,11 +200,6 @@ def count_distance(coordinates1, coordinates2):
 
 def count_distance_from_turn(turn_coordinates, coordinates):
     return int((abs((2 * snake_size) ** 2 - count_distance(turn_coordinates, coordinates) ** 2)) ** 0.5)
-
-
-def create_obstructions(number):
-    for i in range(number):
-        game.obstructions.append(Obstruction())
 
 
 def is_collision_obstruction(obstruction_coordinates, object_coordinates):
@@ -209,9 +227,6 @@ class Game:
         self.running = True
         self.is_alive = True
         self.is_paused = False
-
-        self.number_of_obstructions = 0
-        self.obstructions = []
 
         self.lives = 3
         self.last_length = 0
@@ -258,8 +273,8 @@ pause_button_coordinates = (width - 15, 15)
 
 food_size = 6
 bonus_food_size = 8
-obstruction_size = 40
 snake_size = 7
+obstruction_size = 30
 
 font = pygame.font.Font(None, 50)
 font2 = pygame.font.Font(None, 40)
@@ -268,7 +283,10 @@ clock = pygame.time.Clock()
 
 game = Game.load("saving.pickle")
 
+obstruction = []
+
 while game.running:
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             game.save("saving.pickle")
@@ -336,13 +354,14 @@ while game.running:
             game.bonus_food.draw()
         game.snake.draw()
 
-        for obstruction in game.obstructions:
-            obstruction.draw()
-
         score = font.render("Score " + str(game.snake.score), True, (0, 0, 0))
         lives_on_screen = font.render("Lives " + str(game.lives), True, (0, 0, 0))
         screen.blit(score, (10, 10))
         screen.blit(lives_on_screen, (10, 40))
+        levels = create_levels(game.snake.score)
+
+        for level in levels:
+            level.draw()
 
         pygame.draw.circle(screen, pause_button_color, pause_button_coordinates, pause_button_size, 2)
 
@@ -358,22 +377,22 @@ while game.running:
                 game.length_increasing_food = LengthIncreasingFood()
                 game.length_increasing_food.draw()
 
-                if game.snake.length % 2 != 0:
+                """if game.snake.length % 2 != 0:
                     if game.number_of_obstructions < 20:
                         game.number_of_obstructions = (game.snake.length - 5) // 2
                     game.obstructions = []
-                    create_obstructions(game.number_of_obstructions)
+                    create_obstructions(game.number_of_obstructions)"""
 
             if count_distance(game.length_reducing_food.coordinates, game.snake.head) <= snake_size + food_size:
                 game.snake.eat_length_reducing_food()
                 game.length_reducing_food = LengthReducingFood()
                 game.length_reducing_food.draw()
 
-                if game.snake.length % 2 != 0:
+                """if game.snake.length % 2 != 0:
                     if game.number_of_obstructions < 20:
                         game.number_of_obstructions = (game.snake.length - 5) // 2
                     game.obstructions = []
-                    create_obstructions(game.number_of_obstructions)
+                    create_obstructions(game.number_of_obstructions)"""
 
             if count_distance(game.speed_increasing_food.coordinates, game.snake.head) <= snake_size + food_size:
                 game.snake.eat_speed_increasing_food()
