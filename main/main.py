@@ -93,8 +93,10 @@ class Snake:
 
         for segment in self.segments[2:]:
             if count_distance(segment, self.head) < 2 * snake_size:
-                print(self.head)
-                print(segment)
+                return True
+
+        for level in levels:
+            if level.is_collision(game.snake.head):
                 return True
 
         return False
@@ -144,12 +146,12 @@ class BonusFood(Food):
         pygame.draw.circle(screen, bonus_food_color, self.coordinates, bonus_food_size)
 
 
-class Obstruction:
+class Obstacle:
     color = (127, 127, 127)
 
     def __init__(self, x=None, y=None):
         if x is not None and y is not None:
-            self.coordinates = (x, y, obstruction_size, obstruction_size)
+            self.coordinates = (x, y, obstacle_size, obstacle_size)
 
     def draw(self):
         pygame.draw.rect(screen, self.color, self.coordinates)
@@ -163,33 +165,26 @@ class Level:
         for obstacle in self.obstacles:
             obstacle.draw()
 
+    def is_collision(self, snake_coordinates):
+        for obstacle in self.obstacles:
+            if is_collision_obstacle(obstacle.coordinates, snake_coordinates):
+                return True
+        return False
+
 
 def create_levels(score):
     levels = []
 
-    level1_obstacles = [
-        Obstruction(100, 100),
-        Obstruction(600, 400)
-    ]
     level1 = Level(level1_obstacles)
     levels.append(level1)
 
     if score >= 5:
-        level2_obstacles = [
-            Obstruction(500, 40),
-            Obstruction(200, 300)
-        ]
         level2 = Level(level1_obstacles + level2_obstacles)
         levels.append(level2)
 
-    if score >= 10:
-        level3_obstacles = [
-            Obstruction(400, 400),
-            Obstruction(600, 200),
-            Obstruction(100, 500)
-        ]
-        level3 = Level(level1_obstacles + level2_obstacles + level3_obstacles)
-        levels.append(level3)
+        if score >= 10:
+            level3 = Level(level1_obstacles + level2_obstacles + level3_obstacles)
+            levels.append(level3)
 
     return levels
 
@@ -202,21 +197,21 @@ def count_distance_from_turn(turn_coordinates, coordinates):
     return int((abs((2 * snake_size) ** 2 - count_distance(turn_coordinates, coordinates) ** 2)) ** 0.5)
 
 
-def is_collision_obstruction(obstruction_coordinates, object_coordinates):
-    if obstruction_coordinates[0] < object_coordinates[0] - snake_size < obstruction_coordinates[0] + obstruction_size:
-        if obstruction_coordinates[1] < object_coordinates[1] - snake_size < \
-                obstruction_coordinates[1] + obstruction_size:
+def is_collision_obstacle(obstacle_coordinates, object_coordinates):
+    if obstacle_coordinates[0] < object_coordinates[0] - snake_size < obstacle_coordinates[0] + obstacle_size:
+        if obstacle_coordinates[1] < object_coordinates[1] - snake_size < \
+                obstacle_coordinates[1] + obstacle_size:
             return True
-        if obstruction_coordinates[1] < object_coordinates[1] + snake_size < \
-                obstruction_coordinates[1] + obstruction_size:
+        if obstacle_coordinates[1] < object_coordinates[1] + snake_size < \
+                obstacle_coordinates[1] + obstacle_size:
             return True
-    if obstruction_coordinates[0] < object_coordinates[0] + snake_size < obstruction_coordinates[0] + \
-            obstruction_size:
-        if obstruction_coordinates[1] < object_coordinates[1] - snake_size < \
-                obstruction_coordinates[1] + obstruction_size:
+    if obstacle_coordinates[0] < object_coordinates[0] + snake_size < obstacle_coordinates[0] + \
+            obstacle_size:
+        if obstacle_coordinates[1] < object_coordinates[1] - snake_size < \
+                obstacle_coordinates[1] + obstacle_size:
             return True
-        if obstruction_coordinates[1] < object_coordinates[1] + snake_size < \
-                obstruction_coordinates[1] + obstruction_size:
+        if obstacle_coordinates[1] < object_coordinates[1] + snake_size < \
+                obstacle_coordinates[1] + obstacle_size:
             return True
 
     return False
@@ -274,7 +269,7 @@ pause_button_coordinates = (width - 15, 15)
 food_size = 6
 bonus_food_size = 8
 snake_size = 7
-obstruction_size = 30
+obstacle_size = 30
 
 font = pygame.font.Font(None, 50)
 font2 = pygame.font.Font(None, 40)
@@ -283,7 +278,9 @@ clock = pygame.time.Clock()
 
 game = Game.load("saving.pickle")
 
-obstruction = []
+level1_obstacles = [Obstacle(100, 100), Obstacle(600, 400)]
+level2_obstacles = [Obstacle(500, 40), Obstacle(200, 300)]
+level3_obstacles = [Obstacle(400, 400), Obstacle(600, 200), Obstacle(100, 500)]
 
 while game.running:
 
@@ -377,22 +374,10 @@ while game.running:
                 game.length_increasing_food = LengthIncreasingFood()
                 game.length_increasing_food.draw()
 
-                """if game.snake.length % 2 != 0:
-                    if game.number_of_obstructions < 20:
-                        game.number_of_obstructions = (game.snake.length - 5) // 2
-                    game.obstructions = []
-                    create_obstructions(game.number_of_obstructions)"""
-
             if count_distance(game.length_reducing_food.coordinates, game.snake.head) <= snake_size + food_size:
                 game.snake.eat_length_reducing_food()
                 game.length_reducing_food = LengthReducingFood()
                 game.length_reducing_food.draw()
-
-                """if game.snake.length % 2 != 0:
-                    if game.number_of_obstructions < 20:
-                        game.number_of_obstructions = (game.snake.length - 5) // 2
-                    game.obstructions = []
-                    create_obstructions(game.number_of_obstructions)"""
 
             if count_distance(game.speed_increasing_food.coordinates, game.snake.head) <= snake_size + food_size:
                 game.snake.eat_speed_increasing_food()
