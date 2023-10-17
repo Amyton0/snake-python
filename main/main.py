@@ -1,3 +1,5 @@
+import os.path
+
 import pygame
 import random
 import time
@@ -273,17 +275,50 @@ obstacle_size = 30
 
 font = pygame.font.Font(None, 50)
 font2 = pygame.font.Font(None, 40)
+font3 = pygame.font.Font(None, 30)
+font4 = pygame.font.Font(None, 28)
 
 clock = pygame.time.Clock()
 
-game = Game.load("saving.pickle")
+game = Game()
 
 level1_obstacles = [Obstacle(100, 100), Obstacle(600, 400)]
 level2_obstacles = [Obstacle(500, 40), Obstacle(200, 300)]
 level3_obstacles = [Obstacle(400, 400), Obstacle(600, 200), Obstacle(100, 500)]
 
-while game.running:
+loaded = False
 
+loading_button_coordinates = (width // 3 - 20, height // 2)
+not_loading_button_coordinates = (2 * width // 3 + 20, height // 2)
+loading_button_size = 120
+loading_button_color = (176, 224, 230)
+
+if os.path.isfile("saving.pickle"):
+    while not loaded:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                loaded = True
+                game.running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if count_distance(loading_button_coordinates, event.pos) < loading_button_size:
+                    game = Game.load("saving.pickle")
+                    loaded = True
+                elif count_distance(not_loading_button_coordinates, event.pos) < loading_button_size:
+                    loaded = True
+        screen.fill((255, 255, 255))
+        pygame.draw.circle(screen, loading_button_color, loading_button_coordinates, loading_button_size)
+        pygame.draw.circle(screen, loading_button_color, not_loading_button_coordinates, loading_button_size)
+        loading_text = font3.render("Загрузить", True, (0, 0, 0))
+        not_loading_text = font3.render("Не загружать", True, (0, 0, 0))
+        saving_text = font4.render("последнее сохранение", True, (0, 0, 0))
+        screen.blit(loading_text, (loading_button_coordinates[0] - 50, loading_button_coordinates[1] - 30))
+        screen.blit(saving_text, (loading_button_coordinates[0] - 111, loading_button_coordinates[1] + 5))
+        screen.blit(not_loading_text, (not_loading_button_coordinates[0] - 65, not_loading_button_coordinates[1] - 30))
+        screen.blit(saving_text, (not_loading_button_coordinates[0] - 111, not_loading_button_coordinates[1] + 5))
+        pygame.display.flip()
+            
+
+while game.running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             game.save("saving.pickle")
