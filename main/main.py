@@ -111,7 +111,8 @@ class Food:
 
         while self.coordinates[0] < 130 and self.coordinates[1] < 70 or self.coordinates[0] > \
                 pause_button_coordinates[0] - pause_button_size and self.coordinates[1] > \
-                pause_button_coordinates[1] - pause_button_size:
+                pause_button_coordinates[1] - pause_button_size and \
+                not Level(level1_obstacles + level2_obstacles + level3_obstacles).is_collision(self.coordinates):
             self.coordinates = (random.randint(food_size, width - food_size),
                                 random.randint(food_size, height - food_size))
 
@@ -167,9 +168,9 @@ class Level:
         for obstacle in self.obstacles:
             obstacle.draw()
 
-    def is_collision(self, snake_coordinates):
+    def is_collision(self, coordinates):
         for obstacle in self.obstacles:
-            if is_collision_obstacle(obstacle.coordinates, snake_coordinates):
+            if is_collision_obstacle(obstacle.coordinates, coordinates):
                 return True
         return False
 
@@ -385,6 +386,15 @@ while game.running:
         if game.is_bonus:
             game.bonus_food.draw()
         game.snake.draw()
+
+        if game.snake.score == 20:
+            easter_egg = font3.render("Ого!", True, (0, 0, 0))
+            screen.blit(easter_egg, (width // 2 - 10, 20))
+
+        if game.snake.fps > 150:
+            game.snake.color = (30, 144, 255)
+        else:
+            game.snake.color = (128, 80, 128)
 
         score = font.render("Score " + str(game.snake.score), True, (0, 0, 0))
         lives_on_screen = font.render("Lives " + str(game.lives), True, (0, 0, 0))
